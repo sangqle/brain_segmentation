@@ -23,7 +23,7 @@ class PatchLibrary(object):
                 (3) int 'num_samples': the number of patches to collect from training data.
         '''
         self.patch_size = patch_size
-        self.num_samples = num_samples
+        self.num_samples = int(num_samples)
         self.train_data = train_data
         self.h = self.patch_size[0]
         self.w = self.patch_size[1]
@@ -37,8 +37,8 @@ class PatchLibrary(object):
         OUTPUT: (1) num_samples patches from class 'class_num' randomly selected.
         '''
         h,w = self.patch_size[0], self.patch_size[1]
-        patches, labels = [], np.full(num_patches, class_num, 'float')
-        print 'Finding patches of class {}...'.format(class_num)
+        patches, labels = [], np.full(int(num_patches), int(class_num), 'float')
+        print('Finding patches of class {}...'.format(class_num))
 
         ct = 0
         while ct < num_patches:
@@ -57,7 +57,8 @@ class PatchLibrary(object):
             # select centerpix (p) and patch (p_ix)
             img = io.imread(im_path).reshape(5, 240, 240)[:-1].astype('float')
             p = random.choice(np.argwhere(label == class_num))
-            p_ix = (p[0]-(h/2), p[0]+((h+1)/2), p[1]-(w/2), p[1]+((w+1)/2))
+            p_ix = (p[0] - (h // 2), p[0] + ((h + 1) // 2), p[1] - (w // 2), p[1] + ((w + 1) // 2))
+ #           p_ix = (p[0]-(h/2), p[0]+((h+1)/2), p[1]-(w/2), p[1]+((w+1)/2))
             patch = np.array([i[p_ix[0]:p_ix[1], p_ix[2]:p_ix[3]] for i in img])
 
             # resample it patch is empty or too close to edge
@@ -149,13 +150,14 @@ class PatchLibrary(object):
         '''
         if balanced_classes:
             per_class = self.num_samples / len(classes)
+            print(per_class)
             patches, labels = [], []
             progress.currval = 0
-            for i in progress(xrange(len(classes))):
+            for i in progress(range(len(classes))):
                 p, l = self.find_patches(classes[i], per_class)
                 # set 0 <= pix intensity <= 1
-                for img_ix in xrange(len(p)):
-                    for slice in xrange(len(p[img_ix])):
+                for img_ix in range(len(p)):
+                    for slice in range(len(p[img_ix])):
                         if np.max(p[img_ix][slice]) != 0:
                             p[img_ix][slice] /= np.max(p[img_ix][slice])
                 patches.append(p)
@@ -163,8 +165,7 @@ class PatchLibrary(object):
             return np.array(patches).reshape(self.num_samples, 4, self.h, self.w), np.array(labels).reshape(self.num_samples)
 
         else:
-            print "Use balanced classes, random won't work."
-
+            print("Use balanced classes, random won't work.")
 
 
 if __name__ == '__main__':

@@ -5,8 +5,10 @@ import progressbar
 from glob import glob
 from skimage import io
 
-np.random.seed(5) # for reproducibility
-progress = progressbar.ProgressBar(widgets=[progressbar.Bar('*', '[', ']'), progressbar.Percentage(), ' '])
+np.random.seed(5)  # for reproducibility
+progress = progressbar.ProgressBar(
+    widgets=[progressbar.Bar('*', '[', ']'), progressbar.Percentage(), ' '])
+
 
 class BrainPipeline(object):
     '''
@@ -16,7 +18,8 @@ class BrainPipeline(object):
             (2) bool 'n4itk': True to use n4itk normed t1 scans (defaults to True)
             (3) bool 'n4itk_apply': True to apply and save n4itk filter to t1 and t1c scans for given patient. This will only work if the
     '''
-    def __init__(self, path, n4itk = True, n4itk_apply = False):
+
+    def __init__(self, path, n4itk=False, n4itk_apply=False):
         self.path = path
         self.n4itk = n4itk
         self.n4itk_apply = n4itk_apply
@@ -41,20 +44,24 @@ class BrainPipeline(object):
         t1s = glob(self.path + '/**/*T1*.mha')
         t1_n4 = glob(self.path + '/*T1*/*_n.mha')
         t1 = [scan for scan in t1s if scan not in t1_n4]
-        scans = [flair[0], t1[0], t1[1], t2[0], gt[0]] # directories to each image (5 total)
+        # directories to each image (5 total)
+        scans = [flair[0], t1[0], t1[1], t2[0], gt[0]]
         if self.n4itk_apply:
             print '-> Applyling bias correction...'
             for t1_path in t1:
-                self.n4itk_norm(t1_path) # normalize files
+                self.n4itk_norm(t1_path)  # normalize files
             scans = [flair[0], t1_n4[0], t1_n4[1], t2[0], gt[0]]
         elif self.n4itk:
             scans = [flair[0], t1_n4[0], t1_n4[1], t2[0], gt[0]]
         for scan_idx in xrange(5):
             # read each image directory, save to self.slices
-            slices_by_mode[scan_idx] = io.imread(scans[scan_idx], plugin='simpleitk').astype(float)
-        for mode_ix in xrange(slices_by_mode.shape[0]): # modes 1 thru 5
-            for slice_ix in xrange(slices_by_mode.shape[1]): # slices 1 thru 155
-                slices_by_slice[slice_ix][mode_ix] = slices_by_mode[mode_ix][slice_ix] # reshape by slice
+            slices_by_mode[scan_idx] = io.imread(
+                scans[scan_idx], plugin='simpleitk').astype(float)
+        for mode_ix in xrange(slices_by_mode.shape[0]):  # modes 1 thru 5
+            # slices 1 thru 155
+            for slice_ix in xrange(slices_by_mode.shape[1]):
+                # reshape by slice
+                slices_by_slice[slice_ix][mode_ix] = slices_by_mode[mode_ix][slice_ix]
         return slices_by_mode, slices_by_slice
 
     def norm_slices(self):
@@ -69,7 +76,8 @@ class BrainPipeline(object):
         for slice_ix in xrange(155):
             normed_slices[slice_ix][-1] = self.slices_by_slice[slice_ix][-1]
             for mode_ix in xrange(4):
-                normed_slices[slice_ix][mode_ix] =  self._normalize(self.slices_by_slice[slice_ix][mode_ix])
+                normed_slices[slice_ix][mode_ix] = self._normalize(
+                    self.slices_by_slice[slice_ix][mode_ix])
         print 'Done.'
         return normed_slices
 
@@ -79,7 +87,7 @@ class BrainPipeline(object):
                 (2) index of modality assoc with slice (0=flair, 1=t1, 2=t1c, 3=t2)
         OUTPUT: normalized slice
         '''
-        b, t = np.percentile(slice, (0.5,99.5))
+        b, t = np.percentile(slice, (0.5, 99.5))
         slice = np.clip(slice, b, t)
         if np.std(slice) == 0:
             return slice
@@ -94,30 +102,33 @@ class BrainPipeline(object):
         '''
         print 'Saving scans for patient {}...'.format(patient_num)
         progress.currval = 0
-        if reg_norm_n4 == 'norm': #saved normed slices
-            for slice_ix in progress(xrange(155)): # reshape to strip
+        if reg_norm_n4 == 'norm':  # saved normed slices
+            for slice_ix in progress(xrange(155)):  # reshape to strip
                 strip = self.normed_slices[slice_ix].reshape(1200, 240)
-                if np.max(strip) != 0: # set values < 1
+                if np.max(strip) != 0:  # set values < 1
                     strip /= np.max(strip)
-                if np.min(strip) <= -1: # set values > -1
+                if np.min(strip) <= -1:  # set values > -1
                     strip /= abs(np.min(strip))
                 # save as patient_slice.png
-                io.imsave('Norm_PNG/{}_{}.png'.format(patient_num, slice_ix), strip)
+                io.imsave(
+                    'Norm_PNG/{}_{}.png'.format(patient_num, slice_ix), strip)
         elif reg_norm_n4 == 'reg':
             for slice_ix in progress(xrange(155)):
                 strip = self.slices_by_slice[slice_ix].reshape(1200, 240)
                 if np.max(strip) != 0:
                     strip /= np.max(strip)
-                io.imsave('Training_PNG/{}_{}.png'.format(patient_num, slice_ix), strip)
+                io.imsave(
+                    'Training_PNG/{}_{}.png'.format(patient_num, slice_ix), strip)
         else:
-            for slice_ix in progress(xrange(155)): # reshape to strip
+            for slice_ix in progress(xrange(155)):  # reshape to strip
                 strip = self.normed_slices[slice_ix].reshape(1200, 240)
-                if np.max(strip) != 0: # set values < 1
+                if np.max(strip) != 0:  # set values < 1
                     strip /= np.max(strip)
-                if np.min(strip) <= -1: # set values > -1
+                if np.min(strip) <= -1:  # set values > -1
                     strip /= abs(np.min(strip))
                 # save as patient_slice.png
-                io.imsave('n4_PNG/{}_{}.png'.format(patient_num, slice_ix), strip)
+                io.imsave(
+                    'n4_PNG/{}_{}.png'.format(patient_num, slice_ix), strip)
 
     def n4itk_norm(self, path, n_dims=3, n_iters='[20,20,10,5]'):
         '''
@@ -127,7 +138,8 @@ class BrainPipeline(object):
         '''
         output_fn = path[:-4] + '_n.mha'
         # run n4_bias_correction.py path n_dim n_iters output_fn
-        subprocess.call('python n4_bias_correction.py ' + path + ' ' + str(n_dims) + ' ' + n_iters + ' ' + output_fn, shell = True)
+        subprocess.call('python n4_bias_correction.py ' + path + ' ' +
+                        str(n_dims) + ' ' + n_iters + ' ' + output_fn, shell=True)
 
 
 def save_patient_slices(patients, type):
@@ -140,13 +152,16 @@ def save_patient_slices(patients, type):
         a = BrainPipeline(path)
         a.save_patient(type, patient_num)
 
+
 def s3_dump(directory, bucket):
     '''
     dump files from a given directory to an s3 bucket
     INPUT   (1) string 'directory': directory containing files to save
             (2) string 'bucket': name od s3 bucket to dump files
     '''
-    subprocess.call('aws s3 cp' + ' ' + directory + ' ' + 's3://' + bucket + ' ' + '--recursive')
+    subprocess.call('aws s3 cp' + ' ' + directory + ' ' +
+                    's3://' + bucket + ' ' + '--recursive')
+
 
 def save_labels(fns):
     '''
@@ -154,16 +169,18 @@ def save_labels(fns):
     '''
     progress.currval = 0
     for label_idx in progress(xrange(len(labels))):
-        slices = io.imread(labels[label_idx], plugin = 'simpleitk')
+        slices = io.imread(labels[label_idx], plugin='simpleitk')
         for slice_idx in xrange(len(slices)):
-            io.imsave('Labels/{}_{}L.png'.format(label_idx, slice_idx), slices[slice_idx])
+            io.imsave('Labels/{}_{}L.png'.format(label_idx,
+                                                 slice_idx), slices[slice_idx])
 
 
 if __name__ == '__main__':
-    labels = glob('Original_Data/Training/HGG/**/*more*/**.mha')
-    save_labels(labels)
-    # patients = glob('Training/HGG/**')
+    labels = glob('../../BRATS2015_Training/HGG/**/*more*/**.mha')
+
+    # save_labels(labels)
+    patients = glob('../../BRATS2015_Training/HGG/**')
     # save_patient_slices(patients, 'reg')
     # save_patient_slices(patients, 'norm')
-    # save_patient_slices(patients, 'n4')
+    save_patient_slices(patients, 'n4')
     # s3_dump('Graveyard/Training_PNG/', 'orig-training-png')
