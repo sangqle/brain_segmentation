@@ -11,7 +11,7 @@ progress = progressbar.ProgressBar(
 
 
 class BrainPipeline(object):
-   '''
+    '''
     A class for processing brain scans for one patient
     INPUT:  (1) filepath 'path': path to directory of one patient. Contains following mha files:
             flair, t1, t1c, t2, ground truth (gt)
@@ -35,7 +35,7 @@ class BrainPipeline(object):
         goes into each modality in patient directory and loads individual scans.
         transforms scans of same slice into strip of 5 images
         '''
-        print 'Loading scans...'
+        print('Loading scans...')
         slices_by_mode = np.zeros((5, 155, 240, 240))
         slices_by_slice = np.zeros((155, 5, 240, 240))
         flair = glob(self.path + '/*Flair*/*.mha')
@@ -47,19 +47,19 @@ class BrainPipeline(object):
         # directories to each image (5 total)
         scans = [flair[0], t1[0], t1[1], t2[0], gt[0]]
         if self.n4itk_apply:
-            print '-> Applyling bias correction...'
+            print('-> Applyling bias correction...')
             for t1_path in t1:
                 self.n4itk_norm(t1_path)  # normalize files
             scans = [flair[0], t1_n4[0], t1_n4[1], t2[0], gt[0]]
         elif self.n4itk:
             scans = [flair[0], t1_n4[0], t1_n4[1], t2[0], gt[0]]
-        for scan_idx in xrange(5):
+        for scan_idx in range(5):
             # read each image directory, save to self.slices
             slices_by_mode[scan_idx] = io.imread(
                 scans[scan_idx], plugin='simpleitk').astype(float)
-        for mode_ix in xrange(slices_by_mode.shape[0]):  # modes 1 thru 5
+        for mode_ix in range(slices_by_mode.shape[0]):  # modes 1 thru 5
             # slices 1 thru 155
-            for slice_ix in xrange(slices_by_mode.shape[1]):
+            for slice_ix in range(slices_by_mode.shape[1]):
                 # reshape by slice
                 slices_by_slice[slice_ix][mode_ix] = slices_by_mode[mode_ix][slice_ix]
         return slices_by_mode, slices_by_slice
@@ -71,14 +71,14 @@ class BrainPipeline(object):
         clips top and bottom one percent of pixel intensities
         if n4itk == True, will apply n4itk bias correction to T1 and T1c images
         '''
-        print 'Normalizing slices...'
+        print('Normalizing slices...')
         normed_slices = np.zeros((155, 5, 240, 240))
-        for slice_ix in xrange(155):
+        for slice_ix in range(155):
             normed_slices[slice_ix][-1] = self.slices_by_slice[slice_ix][-1]
-            for mode_ix in xrange(4):
+            for mode_ix in range(4):
                 normed_slices[slice_ix][mode_ix] = self._normalize(
                     self.slices_by_slice[slice_ix][mode_ix])
-        print 'Done.'
+        print('Done.')
         return normed_slices
 
     def _normalize(self, slice):
@@ -100,10 +100,10 @@ class BrainPipeline(object):
                 (2) string 'reg_norm_n4': 'reg' for original images, 'norm' normalized images, 'n4' for n4 normalized images
         OUTPUT: saves png in Norm_PNG directory for normed, Training_PNG for reg
         '''
-        print 'Saving scans for patient {}...'.format(patient_num)
+        print('Saving scans for patient {}...'.format(patient_num))
         progress.currval = 0
         if reg_norm_n4 == 'norm':  # saved normed slices
-            for slice_ix in progress(xrange(155)):  # reshape to strip
+            for slice_ix in progress(range(155)):  # reshape to strip
                 strip = self.normed_slices[slice_ix].reshape(1200, 240)
                 if np.max(strip) != 0:  # set values < 1
                     strip /= np.max(strip)
@@ -113,14 +113,14 @@ class BrainPipeline(object):
                 io.imsave(
                     'Norm_PNG/{}_{}.png'.format(patient_num, slice_ix), strip)
         elif reg_norm_n4 == 'reg':
-            for slice_ix in progress(xrange(155)):
+            for slice_ix in progress(range(155)):
                 strip = self.slices_by_slice[slice_ix].reshape(1200, 240)
                 if np.max(strip) != 0:
                     strip /= np.max(strip)
                 io.imsave(
                     'Training_PNG/{}_{}.png'.format(patient_num, slice_ix), strip)
         else:
-            for slice_ix in progress(xrange(155)):  # reshape to strip
+            for slice_ix in progress(range(155)):  # reshape to strip
                 strip = self.normed_slices[slice_ix].reshape(1200, 240)
                 if np.max(strip) != 0:  # set values < 1
                     strip /= np.max(strip)
@@ -149,6 +149,7 @@ def save_patient_slices(patients, type):
     saves strips of patient slices to approriate directory (Training_PNG/, Norm_PNG/ or n4_PNG/) as patient-num_slice-num
     '''
     for patient_num, path in enumerate(patients):
+        # print(path)
         a = BrainPipeline(path)
         a.save_patient(type, patient_num)
 
@@ -168,19 +169,20 @@ def save_labels(fns):
     INPUT list 'fns': filepaths to all labels
     '''
     progress.currval = 0
-    for label_idx in progress(xrange(len(labels))):
+    for label_idx in progress(range(len(labels))):
         slices = io.imread(labels[label_idx], plugin='simpleitk')
-        for slice_idx in xrange(len(slices)):
+        for slice_idx in range(len(slices)):
             io.imsave('Labels/{}_{}L.png'.format(label_idx,
                                                  slice_idx), slices[slice_idx])
 
 
 if __name__ == '__main__':
-    labels = glob('../../BRATS2015_Training/HGG/**/*more*/**.mha')
-
-    # save_labels(labels)
-    patients = glob('../../BRATS2015_Training/HGG/**')
-    # save_patient_slices(patients, 'reg')
-    # save_patient_slices(patients, 'norm')
+    labels = glob(
+        '../input/brats2015/BRATS2015_Training/BRATS2015_Training/HGG/**/*more*/**.mha')
+    save_labels(labels)
+    patients = glob(
+        '../input/brats2015/BRATS2015_Training/BRATS2015_Training/HGG/**')
+    save_patient_slices(patients, 'reg')
+    save_patient_slices(patients, 'norm')
     save_patient_slices(patients, 'n4')
-    # s3_dump('Graveyard/Training_PNG/', 'orig-training-png')
+#    s3_dump('Graveyard/Training_PNG/', 'orig-training-png')
