@@ -11,7 +11,7 @@ progress = progressbar.ProgressBar(
 
 
 class BrainPipeline(object):
-    '''
+   '''
     A class for processing brain scans for one patient
     INPUT:  (1) filepath 'path': path to directory of one patient. Contains following mha files:
             flair, t1, t1c, t2, ground truth (gt)
